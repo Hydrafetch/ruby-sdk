@@ -23,6 +23,6 @@ jobs:
           TAG="${GITHUB_REF_NAME#v}"
           GEM=$(ruby -Ilib -e 'require "hydrafetch/version"; print Hydrafetch::VERSION')
           [ "$TAG" = "$GEM" ] || { echo "tag $TAG != version.rb $GEM"; exit 1; }
-      - uses: rubygems/configure-rubygems-credentials@v1
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
       - run: gem build hydrafetch.gemspec
       - run: gem push hydrafetch-*.gem
