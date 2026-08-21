@@ -1,0 +1,26 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - run: bundle exec rake test
+      - name: Fail if the tag and version.rb disagree
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          GEM=$(ruby -Ilib -e 'require "hydrafetch/version"; print Hydrafetch::VERSION')
+          [ "$TAG" = "$GEM" ] || { echo "tag $TAG != version.rb $GEM"; exit 1; }
+      - uses: rubygems/release-gem@v1
