@@ -76,6 +76,16 @@ class ClientTest < Minitest::Test
     assert_nil @requests.first.body
   end
 
+  def test_styleguide_reads_a_domain_or_one_page
+    client = responding
+    client.styleguide("https://stripe.com/pricing", maxAge: 0)
+
+    query = @requests.first.query
+    assert_equal "https://stripe.com/pricing", query["url"]
+    assert_equal "0", query["maxAge"]
+    assert_nil query["domain"]
+  end
+
   def test_error_carries_code_status_and_request_id
     client = responding(401, {
       "success" => false,

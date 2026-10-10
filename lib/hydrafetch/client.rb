@@ -57,8 +57,9 @@ module Hydrafetch
       get("/v1/web/brand/logo", { domain: domain }.merge(compact(options)))
     end
 
-    def styleguide(domain)
-      get("/v1/web/styleguide", domain: domain)
+    def styleguide(domain_or_url, **options)
+      key = domain_or_url.match?(%r{\Ahttps?://}i) ? :url : :domain
+      get("/v1/web/styleguide", { key => domain_or_url }.merge(compact(options)))
     end
 
     def screenshot(url, **options)

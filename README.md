@@ -126,6 +126,7 @@ end
 hf.brand("stripe.com")                             # logos, colours, fonts, socials
 hf.logo("stripe.com", theme: "dark", type: "icon") # one asset
 hf.styleguide("stripe.com")                        # computed design system
+hf.styleguide("https://stripe.com/pricing", maxAge: 0) # one page, read fresh
 ```
 
 For logos in a browser use [`@hydrafetch/client-sdk`](https://github.com/Hydrafetch/client-sdk) with a publishable key. Those bill against logo pulls rather than credits.
@@ -181,7 +182,7 @@ hf = Hydrafetch::Client.new("hf_...",
 | `extract(urls, **options)` | hash with `"results"` | 5 per URL |
 | `brand(domain)` | brand hash | 5 |
 | `logo(domain, **options)` | logo hash | 1 |
-| `styleguide(domain)` | design system hash | 10 |
+| `styleguide(domain_or_url, **options)` | design system hash | 10 |
 | `screenshot(url, **options)` | screenshot hash | 5 |
 | `images(url)`, `links(url)` | page assets | 1 |
 | `crawl(url, **options)` | job hash, polled to completion | 1 per page |
