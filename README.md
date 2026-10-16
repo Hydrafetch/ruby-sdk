@@ -31,7 +31,7 @@ page = hf.scrape("https://example.com/article")
 puts page["markdown"]
 ```
 
-Create a key at [app.hydrafetch.com](https://app.hydrafetch.com). The constructor reads `HYDRAFETCH_API_KEY` when no key is passed.
+Copy your key from [app.hydrafetch.com](https://app.hydrafetch.com). The constructor reads `HYDRAFETCH_API_KEY` when no key is passed.
 
 Responses are plain hashes with string keys. Option names are camelCase because they are passed to the API unchanged; client options such as `poll_interval:` and `job_timeout:` are snake_case.
 
