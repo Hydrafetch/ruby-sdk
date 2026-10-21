@@ -11,7 +11,7 @@ module Hydrafetch
     DEFAULT_MAX_RETRIES = 2
     TERMINAL_STATUSES = %w[completed failed cancelled].freeze
 
-    attr_reader :base_url
+    attr_reader :base_url, :last_request_id
 
     def initialize(api_key = nil, base_url: DEFAULT_BASE_URL, timeout: DEFAULT_TIMEOUT,
                    max_retries: DEFAULT_MAX_RETRIES)
@@ -30,6 +30,16 @@ module Hydrafetch
 
     def scrape(url, **options)
       post("/v1/web/scrape", { url: url }.merge(compact(options)))
+    end
+
+    def rate_result(rating, request_id: nil, url: nil, reasons: nil, note: nil)
+      if request_id.nil? && url.nil?
+        raise Error.new("Pass request_id: or url: to say which result you are rating.",
+                        code: "VALIDATION_ERROR", status: 400)
+      end
+
+      post("/v1/web/feedback", compact(requestId: request_id, url: url, rating: rating,
+                                        reasons: reasons, note: note))
     end
 
     def markdown(url, **options)
@@ -162,6 +172,7 @@ module Hydrafetch
         end
 
         res = http_for(uri).request(req)
+        @last_request_id = res["x-request-id"] || @last_request_id
         unwrap(res)
       rescue Error => e
         raise unless e.retryable? && attempt < @max_retries

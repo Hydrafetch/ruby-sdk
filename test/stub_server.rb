@@ -67,17 +67,18 @@ class StubServer
     request = Request.new(method: method, path: uri.path, query: query, headers: headers, body: parsed)
     @mutex.synchronize { @requests << request }
 
-    status, payload = @handler.call(request)
-    write(client, status, payload)
+    status, payload, extra = @handler.call(request)
+    write(client, status, payload, extra || {})
   rescue Errno::EPIPE, Errno::ECONNRESET
     nil
   ensure
     client.close rescue nil
   end
 
-  def write(client, status, payload)
+  def write(client, status, payload, extra)
     client.print("HTTP/1.1 #{status} X\r\n")
     client.print("Content-Type: application/json\r\n")
+    extra.each { |name, value| client.print("#{name}: #{value}\r\n") }
     client.print("Content-Length: #{payload.bytesize}\r\n")
     client.print("Connection: close\r\n\r\n")
     client.print(payload)

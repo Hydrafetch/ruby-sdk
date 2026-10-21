@@ -188,4 +188,30 @@ class ClientTest < Minitest::Test
       client.batch(["https://a.example"], poll_interval: 0.01, job_timeout: 0.02)
     end
   end
+
+  def test_rate_result_posts_the_rating_for_the_last_request
+    server = serving do |req|
+      if req.path == "/v1/web/feedback"
+        [200, JSON.generate({ "success" => true, "data" => { "id" => "f1", "requestId" => "r1", "rating" => "bad" } })]
+      else
+        [200, JSON.generate({ "success" => true, "data" => {} }), { "X-Request-Id" => "r1" }]
+      end
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 0)
+    client.scrape("https://example.com")
+    assert_equal "r1", client.last_request_id
+
+    out = client.rate_result("bad", request_id: client.last_request_id, reasons: ["missing_content"], note: "no prices")
+
+    assert_equal "f1", out["id"]
+    assert_equal({ "requestId" => "r1", "rating" => "bad", "reasons" => ["missing_content"], "note" => "no prices" },
+                 @requests.last.body)
+  end
+
+  def test_rate_result_by_url_and_needs_a_target
+    client = responding(200, { "success" => true, "data" => { "id" => "f2" } })
+    client.rate_result("good", url: "https://example.com")
+    assert_equal({ "url" => "https://example.com", "rating" => "good" }, @requests.last.body)
+    assert_raises(Hydrafetch::Error) { client.rate_result("good") }
+  end
 end

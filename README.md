@@ -131,6 +131,22 @@ hf.styleguide("https://stripe.com/pricing", maxAge: 0) # one page, read fresh
 
 For logos in a browser use [`@hydrafetch/client-sdk`](https://github.com/Hydrafetch/client-sdk) with a publishable key. Those bill against logo pulls rather than credits.
 
+## Rating results
+
+Tell us when a result was wrong, so it gets looked at. It is free, and rating the same request again replaces the earlier rating.
+
+```ruby
+hf.scrape("https://stripe.com/pricing")
+hf.rate_result("bad",
+               request_id: hf.last_request_id,
+               reasons: ["missing_content"],
+               note: "The enterprise tier is missing")
+
+hf.rate_result("good", url: "https://stripe.com/pricing") # by URL, last 24 hours
+```
+
+Reasons are `missing_content`, `wrong_content`, `blocked`, `slow`, `formatting` and `other`.
+
 ## Error handling
 
 All failures raise `Hydrafetch::Error`, carrying the API's error code, HTTP status and request id.
@@ -189,6 +205,7 @@ hf = Hydrafetch::Client.new("hf_...",
 | `batch(urls, **options)` | job hash, polled to completion | 1 per page |
 | `start_crawl`, `start_batch` | job id `String` | 1 per page |
 | `crawl_status(id)`, `batch_status(id)` | job hash | free |
+| `rate_result(rating, request_id:, url:, reasons:, note:)` | rating hash | free |
 
 Failed requests are not billed. Pricing does not vary with page difficulty, so there is no render, stealth or proxy option to set.
 
