@@ -54,6 +54,16 @@ module Hydrafetch
       post("/v1/web/search", { query: query }.merge(compact(options)))
     end
 
+    def search_jobs(query, **options)
+      post("/v1/web/index/jobs/search", { query: query }.merge(compact(options)))
+    end
+
+    def hiring_changes(domains, since, **options)
+      list = domains.is_a?(String) ? [domains] : domains.to_a
+      at = since.respond_to?(:iso8601) ? since.iso8601 : since
+      post("/v1/web/index/jobs/changes", { domains: list, since: at }.merge(compact(options)))
+    end
+
     def extract(urls, **options)
       list = urls.is_a?(String) ? [urls] : urls.to_a
       post("/v1/web/extract", { urls: list }.merge(compact(options)))

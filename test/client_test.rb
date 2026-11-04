@@ -214,4 +214,22 @@ class ClientTest < Minitest::Test
     assert_equal({ "url" => "https://example.com", "rating" => "good" }, @requests.last.body)
     assert_raises(Hydrafetch::Error) { client.rate_result("good") }
   end
+
+  def test_search_jobs_posts_the_query_and_returns_the_list
+    client = responding(200, { "success" => true, "data" => [{ "title" => "Data Engineer", "domain" => "acme.com" }] })
+    jobs = client.search_jobs("data engineer", location: "Berlin", limit: 20, remoteOnly: nil)
+    assert_equal "Data Engineer", jobs.first["title"]
+    assert_equal "/v1/web/index/jobs/search", @requests.last.path
+    assert_equal({ "query" => "data engineer", "location" => "Berlin", "limit" => 20 }, @requests.last.body)
+  end
+
+  def test_hiring_changes_takes_one_domain_or_many_and_a_time
+    client = responding(200, { "success" => true, "data" => [] })
+    client.hiring_changes("stripe.com", Time.utc(2026, 10, 1))
+    assert_equal "/v1/web/index/jobs/changes", @requests.last.path
+    assert_equal({ "domains" => ["stripe.com"], "since" => "2026-10-01T00:00:00Z" }, @requests.last.body)
+    client.hiring_changes(%w[a.com b.com], "2026-10-01", includeDescriptions: true)
+    assert_equal({ "domains" => %w[a.com b.com], "since" => "2026-10-01", "includeDescriptions" => true },
+                 @requests.last.body)
+  end
 end

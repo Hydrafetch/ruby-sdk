@@ -120,6 +120,24 @@ res["results"].each do |r|
 end
 ```
 
+## Jobs
+
+Search open jobs collected from company career sites and hiring platforms, by the words in the job title:
+
+```ruby
+jobs = hf.search_jobs("data engineer", location: "Berlin", postedWithinDays: 14, limit: 20)
+jobs.each { |job| puts "#{job["title"]} #{job["domain"]} #{job["url"]}" }
+```
+
+See what changed in a company's hiring since a date: what is open now, what opened and what closed, by department, seniority and location, with the jobs themselves:
+
+```ruby
+acme = hf.hiring_changes("acme.com", "2026-10-01").first
+puts acme["totals"] # {"open"=>42, "opened"=>6, "closed"=>3}
+```
+
+A search costs 1 credit per 10 jobs returned, and an empty one is free. Hiring changes cost 1 credit per company we have jobs for; companies we do not track yet come back empty and are free.
+
 ## Brand data
 
 ```ruby
@@ -195,6 +213,8 @@ hf = Hydrafetch::Client.new("hf_...",
 | `markdown(url, **options)` | `String` | 1 |
 | `map(url, **options)` | links hash | 1 |
 | `search(query, **options)` | results hash | 1 + 1 per scraped result |
+| `search_jobs(query, **options)` | array of jobs | 1 per 10 jobs |
+| `hiring_changes(domains, since, **options)` | array of companies | 1 per company with jobs |
 | `extract(urls, **options)` | hash with `"results"` | 5 per URL |
 | `brand(domain)` | brand hash | 5 |
 | `logo(domain, **options)` | logo hash | 1 |
