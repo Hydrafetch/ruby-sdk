@@ -1,5 +1,6 @@
 require "json"
 require "net/http"
+require "time"
 require "uri"
 
 require_relative "errors"
