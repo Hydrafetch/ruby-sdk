@@ -55,6 +55,10 @@ module Hydrafetch
       post("/v1/web/search", { query: query }.merge(compact(options)))
     end
 
+    def news(query, **options)
+      post("/v1/web/news", { query: query }.merge(compact(options)))
+    end
+
     def search_jobs(query, **options)
       post("/v1/web/index/jobs/search", { query: query }.merge(compact(options)))
     end

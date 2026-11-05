@@ -232,4 +232,13 @@ class ClientTest < Minitest::Test
     assert_equal({ "domains" => %w[a.com b.com], "since" => "2026-10-01", "includeDescriptions" => true },
                  @requests.last.body)
   end
+
+  def test_news_posts_the_query_and_window
+    found = { "query" => "acme raises", "status" => "ok", "results" => [{ "title" => "Acme raises $10M" }] }
+    client = responding(200, { "success" => true, "data" => found })
+    news = client.news("acme raises", timeRange: "day", limit: 5, country: nil)
+    assert_equal "ok", news["status"]
+    assert_equal "/v1/web/news", @requests.last.path
+    assert_equal({ "query" => "acme raises", "timeRange" => "day", "limit" => 5 }, @requests.last.body)
+  end
 end

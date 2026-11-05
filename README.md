@@ -120,6 +120,17 @@ res["results"].each do |r|
 end
 ```
 
+## News
+
+Find recent news articles about anything, newest first, each with its outlet and publish time:
+
+```ruby
+news = hf.news("acme raises funding", timeRange: "week", limit: 10)
+news["results"].each { |a| puts "#{a["publishedAt"]} #{a["title"]} #{a["url"]}" }
+```
+
+A news search costs 1 credit, and one that finds nothing is free. Pass `scrapeResults: true` to also read each article as clean data, at 1 extra credit per article.
+
 ## Jobs
 
 Search open jobs collected from company career sites and hiring platforms, by the words in the job title:
@@ -213,6 +224,7 @@ hf = Hydrafetch::Client.new("hf_...",
 | `markdown(url, **options)` | `String` | 1 |
 | `map(url, **options)` | links hash | 1 |
 | `search(query, **options)` | results hash | 1 + 1 per scraped result |
+| `news(query, **options)` | articles, newest first | 1 + 1 per article read; free when empty |
 | `search_jobs(query, **options)` | array of jobs | 1 per 10 jobs |
 | `hiring_changes(domains, since, **options)` | array of companies | 1 per company with jobs |
 | `extract(urls, **options)` | hash with `"results"` | 5 per URL |
