@@ -84,7 +84,7 @@ Pass `prompt:` instead of, or alongside, `schema:` to describe the fields in pla
 
 ```ruby
 links = hf.map("https://example.com", limit: 1000)["links"]
-docs = links.select { |url| url.include?("/docs/") }
+docs = links.map { |link| link["url"] }.select { |url| url.include?("/docs/") }
 ```
 
 `batch` and `crawl` submit a job and poll until it finishes.
