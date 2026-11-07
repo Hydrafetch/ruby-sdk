@@ -11,6 +11,11 @@ module Hydrafetch
     DEFAULT_TIMEOUT = 120
     DEFAULT_MAX_RETRIES = 2
     TERMINAL_STATUSES = %w[completed failed cancelled].freeze
+    ACCEPTED = 202
+    CALL_JOB_TIMEOUT = 330
+    CALL_JOB_POLL = 2
+
+    attr_writer :call_job_poll
 
     attr_reader :base_url, :last_request_id
 
@@ -188,7 +193,9 @@ module Hydrafetch
 
         res = http_for(uri).request(req)
         @last_request_id = res["x-request-id"] || @last_request_id
-        unwrap(res)
+        result = unwrap(res)
+        poll = res.code.to_i == ACCEPTED && result.is_a?(Hash) ? result["poll"] : nil
+        poll ? follow_call_job(poll) : result
       rescue Error => e
         raise unless e.retryable? && attempt < @max_retries
 
@@ -200,6 +207,32 @@ module Hydrafetch
           "Request to #{path} timed out after #{@timeout}s. Raise timeout:, " \
           "or use the crawl and batch job endpoints for long work. (#{e.class})"
         )
+      end
+    end
+
+    def follow_call_job(poll)
+      interval = @call_job_poll || CALL_JOB_POLL
+      deadline = monotonic + CALL_JOB_TIMEOUT
+      loop do
+        sleep interval
+        job = request(Net::HTTP::Get, poll)
+        case job["status"]
+        when "completed"
+          result = job["result"]
+          return result.is_a?(Hash) && result.key?("data") ? result["data"] : result
+        when "failed"
+          error = job["error"] || {}
+          raise Error.new(
+            error["message"] || "The job failed.",
+            code: error["code"] || "JOB_FAILED",
+            status: error["status"] || 500,
+            request_id: job["jobId"],
+            details: error["details"]
+          )
+        end
+        if monotonic + interval > deadline
+          raise TimeoutError.new("The job did not finish in time; poll #{poll} for its result.")
+        end
       end
     end
 

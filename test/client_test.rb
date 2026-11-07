@@ -241,4 +241,34 @@ class ClientTest < Minitest::Test
     assert_equal "/v1/web/news", @requests.last.path
     assert_equal({ "query" => "acme raises", "timeRange" => "day", "limit" => 5 }, @requests.last.body)
   end
+
+  def accepted_then(job)
+    server = serving do |req|
+      if req.path.start_with?("/v1/web/jobs/")
+        [200, JSON.generate(job)]
+      else
+        [202, JSON.generate({ "jobId" => "j-1", "status" => "running", "poll" => "/v1/web/jobs/j-1" })]
+      end
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 0)
+    client.call_job_poll = 0
+    client
+  end
+
+  def test_a_202_is_followed_until_the_job_completes
+    client = accepted_then({ "jobId" => "j-1", "status" => "completed",
+                             "result" => { "data" => { "markdown" => "# hi" } } })
+
+    assert_equal({ "markdown" => "# hi" }, client.scrape("https://example.com"))
+    assert_equal "/v1/web/jobs/j-1", @requests.last.path
+  end
+
+  def test_a_failed_job_raises_the_error_the_call_would_have
+    client = accepted_then({ "jobId" => "j-1", "status" => "failed",
+                             "error" => { "code" => "SERVICE_UNAVAILABLE", "message" => "walled", "status" => 503 } })
+
+    err = assert_raises(Hydrafetch::Error) { client.search("q") }
+    assert_equal "SERVICE_UNAVAILABLE", err.code
+    assert_equal 503, err.status
+  end
 end
