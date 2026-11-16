@@ -263,6 +263,56 @@ class ClientTest < Minitest::Test
     assert_equal "/v1/web/jobs/j-1", @requests.last.path
   end
 
+  def test_waits_for_retry_after_before_retrying
+    calls = 0
+    server = serving do |_req|
+      calls += 1
+      if calls == 1
+        [429, JSON.generate({ "success" => false, "error" => { "message" => "slow" } }), { "Retry-After" => "7" }]
+      else
+        [200, JSON.generate({ "success" => true, "data" => { "markdown" => "ok" } })]
+      end
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 2)
+    slept = []
+    client.define_singleton_method(:sleep) { |seconds| slept << seconds }
+
+    assert_equal({ "markdown" => "ok" }, client.scrape("https://example.com"))
+    assert_equal [7], slept
+  end
+
+  def test_raises_at_once_when_asked_to_wait_too_long
+    calls = 0
+    server = serving do |_req|
+      calls += 1
+      [503, JSON.generate({ "success" => false,
+                            "error" => { "message" => "later", "details" => { "retryAfterSeconds" => 900 } } })]
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 3)
+
+    err = assert_raises(Hydrafetch::Error) { client.scrape("https://example.com") }
+    assert_equal 900, err.retry_after
+    assert_equal 1, calls
+  end
+
+  def test_a_failed_job_is_never_started_again
+    posts = 0
+    server = serving do |req|
+      if req.path.start_with?("/v1/web/jobs/")
+        [200, JSON.generate({ "jobId" => "j-1", "status" => "failed",
+                              "error" => { "code" => "SERVICE_UNAVAILABLE", "message" => "walled", "status" => 503 } })]
+      else
+        posts += 1
+        [202, JSON.generate({ "jobId" => "j-1", "status" => "running", "poll" => "/v1/web/jobs/j-1" })]
+      end
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 2)
+    client.call_job_poll = 0
+
+    assert_raises(Hydrafetch::Error) { client.search("q") }
+    assert_equal 1, posts
+  end
+
   def test_a_failed_job_raises_the_error_the_call_would_have
     client = accepted_then({ "jobId" => "j-1", "status" => "failed",
                              "error" => { "code" => "SERVICE_UNAVAILABLE", "message" => "walled", "status" => 503 } })

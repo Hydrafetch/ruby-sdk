@@ -14,6 +14,9 @@ module Hydrafetch
     ACCEPTED = 202
     CALL_JOB_TIMEOUT = 330
     CALL_JOB_POLL = 2
+    MAX_RETRY_WAIT = 30
+    BACKOFF_CAP = 8.0
+    TRANSPORT_ERRORS = [SocketError, IOError, SystemCallError].freeze
 
     attr_writer :call_job_poll
 
@@ -194,20 +197,49 @@ module Hydrafetch
         res = http_for(uri).request(req)
         @last_request_id = res["x-request-id"] || @last_request_id
         result = unwrap(res)
-        poll = res.code.to_i == ACCEPTED && result.is_a?(Hash) ? result["poll"] : nil
-        poll ? follow_call_job(poll) : result
       rescue Error => e
-        raise unless e.retryable? && attempt < @max_retries
+        wait = retry_wait(e, attempt)
+        raise unless e.retryable? && attempt < @max_retries && wait
 
         attempt += 1
-        sleep((2**attempt) * 0.25)
+        sleep wait
         retry
       rescue Net::OpenTimeout, Net::ReadTimeout => e
         raise TimeoutError.new(
           "Request to #{path} timed out after #{@timeout}s. Raise timeout:, " \
           "or use the crawl and batch job endpoints for long work. (#{e.class})"
         )
+      rescue *TRANSPORT_ERRORS
+        raise unless attempt < @max_retries
+
+        sleep backoff(attempt)
+        attempt += 1
+        retry
       end
+      poll = res.code.to_i == ACCEPTED && result.is_a?(Hash) ? result["poll"] : nil
+      poll ? follow_call_job(poll) : result
+    end
+
+    def retry_wait(error, attempt)
+      return backoff(attempt) if error.retry_after.nil?
+
+      error.retry_after > MAX_RETRY_WAIT ? nil : error.retry_after
+    end
+
+    def backoff(attempt)
+      rand * [BACKOFF_CAP, 0.5 * (2**attempt)].min
+    end
+
+    def retry_after(res, details)
+      header = res["retry-after"].to_s.strip
+      return header.to_i if header.match?(/\A\d+\z/)
+      return nil unless details.is_a?(Hash)
+
+      %w[retryAfterSeconds retryAfter].each do |key|
+        value = details[key]
+        return value if value.is_a?(Integer) && value >= 0
+      end
+      nil
     end
 
     def follow_call_job(poll)
@@ -261,7 +293,8 @@ module Hydrafetch
           code: (error && error["code"]) || "HTTP_#{status}",
           status: status,
           request_id: meta && meta["requestId"],
-          details: error && error["details"]
+          details: error && error["details"],
+          retry_after: retry_after(res, error && error["details"])
         )
       end
 

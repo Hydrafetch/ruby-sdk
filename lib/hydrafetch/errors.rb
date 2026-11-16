@@ -1,13 +1,14 @@
 module Hydrafetch
   class Error < StandardError
-    attr_reader :code, :status, :request_id, :details
+    attr_reader :code, :status, :request_id, :details, :retry_after
 
-    def initialize(message, code: "UNKNOWN", status: 500, request_id: nil, details: nil)
+    def initialize(message, code: "UNKNOWN", status: 500, request_id: nil, details: nil, retry_after: nil)
       super(message)
       @code = code
       @status = status
       @request_id = request_id
       @details = details
+      @retry_after = retry_after
     end
 
     def to_s
