@@ -205,7 +205,7 @@ end
 | 429 | rate limited | yes, twice |
 | 5xx | upstream failure | yes, twice |
 
-Retries wait as long as the response asks through `Retry-After` or `retryAfterSeconds`, and otherwise back off with jitter. When the response asks for more than 30 seconds the client does not wait; it raises at once and `e.retry_after` gives the seconds to wait before asking again. A dropped connection is retried too, including while the client follows a job, and a job that fails is never started a second time.
+Retries wait as long as the response asks through `Retry-After` or `retryAfterSeconds`, and otherwise back off with jitter. When the response asks for more than 30 seconds the client does not wait; it raises at once and `e.retry_after` gives the seconds to wait before asking again. A dropped connection is retried too, including while the client follows a job, and a job that fails is never started a second time. Every POST carries an Idempotency-Key that its own retries reuse, so a retry after a dropped connection returns the first answer instead of running and charging again.
 
 A 503 from `scrape` means the origin is unreachable, usually a dead domain or a broken certificate.
 

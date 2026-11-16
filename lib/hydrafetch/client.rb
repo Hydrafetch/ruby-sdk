@@ -1,4 +1,5 @@
 require "json"
+require "securerandom"
 require "net/http"
 require "time"
 require "uri"
@@ -185,10 +186,12 @@ module Hydrafetch
       uri.query = URI.encode_www_form(query) unless query.nil? || query.empty?
 
       attempt = 0
+      idempotency_key = verb == Net::HTTP::Post ? SecureRandom.uuid : nil
       begin
         req = verb.new(uri)
         req["X-API-Key"] = @api_key
         req["Accept"] = "application/json"
+        req["Idempotency-Key"] = idempotency_key if idempotency_key
         if body
           req["Content-Type"] = "application/json"
           req.body = JSON.generate(body)

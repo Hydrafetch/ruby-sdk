@@ -313,6 +313,26 @@ class ClientTest < Minitest::Test
     assert_equal 1, posts
   end
 
+  def test_reuses_one_idempotency_key_across_retries
+    keys = []
+    server = serving do |req|
+      keys << req.headers["idempotency-key"]
+      if keys.size == 1
+        [503, JSON.generate({ "success" => false, "error" => { "message" => "busy" } })]
+      else
+        [200, JSON.generate({ "success" => true, "data" => { "markdown" => "ok" } })]
+      end
+    end
+    client = Hydrafetch::Client.new("hf_test", base_url: server.base_url, max_retries: 2)
+    client.define_singleton_method(:sleep) { |_s| nil }
+    2.times { client.scrape("https://example.com") }
+
+    assert_equal 3, keys.size
+    refute_nil keys[0]
+    assert_equal keys[0], keys[1]
+    refute_equal keys[1], keys[2]
+  end
+
   def test_a_failed_job_raises_the_error_the_call_would_have
     client = accepted_then({ "jobId" => "j-1", "status" => "failed",
                              "error" => { "code" => "SERVICE_UNAVAILABLE", "message" => "walled", "status" => 503 } })

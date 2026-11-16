@@ -31,7 +31,7 @@ module Hydrafetch
     end
 
     def retryable?
-      status == 429 || status >= 500
+      status == 429 || status >= 500 || code == "IDEMPOTENCY_IN_PROGRESS"
     end
 
     def timeout?
