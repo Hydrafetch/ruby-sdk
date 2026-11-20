@@ -137,6 +137,41 @@ module Hydrafetch
       request(Net::HTTP::Delete, "/v1/web/batch/#{escape(id)}")
     end
 
+    def create_monitor(name, targets, every:, **options)
+      post("/v1/web/monitors", { name: name, schedule: { every: every }, targets: targets.to_a }.merge(compact(options)))
+    end
+
+    def list_monitors(limit: nil, offset: nil)
+      get("/v1/web/monitors", { limit: limit, offset: offset })
+    end
+
+    def get_monitor(id)
+      get("/v1/web/monitors/#{escape(id)}")
+    end
+
+    def update_monitor(id, every: nil, **changes)
+      body = compact(changes)
+      body[:schedule] = { every: every } if every
+      request(Net::HTTP::Patch, "/v1/web/monitors/#{escape(id)}", body: body)
+    end
+
+    def delete_monitor(id)
+      request(Net::HTTP::Delete, "/v1/web/monitors/#{escape(id)}")
+      nil
+    end
+
+    def run_monitor(id)
+      post("/v1/web/monitors/#{escape(id)}/run", nil)
+    end
+
+    def list_monitor_checks(id, limit: nil, offset: nil)
+      get("/v1/web/monitors/#{escape(id)}/checks", { limit: limit, offset: offset })
+    end
+
+    def get_monitor_check(id, check_id)
+      get("/v1/web/monitors/#{escape(id)}/checks/#{escape(check_id)}")
+    end
+
     def crawl(url, poll_interval: 2, job_timeout: 300, on_progress: nil, **options)
       id = start_crawl(url, **options)
       wait(poll_interval, job_timeout, on_progress) { crawl_status(id) }

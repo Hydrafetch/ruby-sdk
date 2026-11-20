@@ -357,4 +357,49 @@ class ClientTest < Minitest::Test
     assert_equal "SERVICE_UNAVAILABLE", err.code
     assert_equal 503, err.status
   end
+
+  def test_create_monitor_sends_schedule_targets_and_goal
+    client = responding(201, { "success" => true, "data" => { "id" => "mon_1" } })
+    out = client.create_monitor(
+      "Pricing",
+      [{ type: "pages", urls: ["https://acme.com/pricing"], goal: "the price drops" }],
+      every: "1h",
+      email: "daily"
+    )
+
+    assert_equal({ "id" => "mon_1" }, out)
+    assert_equal ["POST", "/v1/web/monitors"], [@requests.first.method, @requests.first.path]
+    assert_equal({ "every" => "1h" }, @requests.first.body["schedule"])
+    assert_equal "the price drops", @requests.first.body["targets"].first["goal"]
+    assert_equal "daily", @requests.first.body["email"]
+  end
+
+  def test_update_monitor_patches_and_nests_every_under_schedule
+    client = responding(200, { "success" => true, "data" => { "id" => "mon_1" } })
+    client.update_monitor("mon_1", every: "1d", status: "paused")
+
+    assert_equal ["PATCH", "/v1/web/monitors/mon_1"], [@requests.first.method, @requests.first.path]
+    assert_equal({ "schedule" => { "every" => "1d" }, "status" => "paused" }, @requests.first.body)
+  end
+
+  def test_monitor_routes
+    client = responding(200, { "success" => true, "data" => [] })
+    client.list_monitors(limit: 10, offset: 20)
+    client.run_monitor("mon_1")
+    client.list_monitor_checks("mon_1", limit: 5)
+    client.get_monitor_check("mon_1", "chk_1")
+
+    assert_equal [
+      ["GET", "/v1/web/monitors", { "limit" => "10", "offset" => "20" }],
+      ["POST", "/v1/web/monitors/mon_1/run", {}],
+      ["GET", "/v1/web/monitors/mon_1/checks", { "limit" => "5" }],
+      ["GET", "/v1/web/monitors/mon_1/checks/chk_1", {}]
+    ], @requests.map { |r| [r.method, r.path, r.query] }
+  end
+
+  def test_delete_monitor_returns_nil_on_an_empty_204
+    client = responding(204, nil)
+    assert_nil client.delete_monitor("mon_1")
+    assert_equal ["DELETE", "/v1/web/monitors/mon_1"], [@requests.first.method, @requests.first.path]
+  end
 end
