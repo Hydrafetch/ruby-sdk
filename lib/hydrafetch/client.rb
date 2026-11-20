@@ -117,7 +117,12 @@ module Hydrafetch
     end
 
     def start_batch(urls, **options)
-      job_id(post("/v1/web/batch", { urls: urls.to_a }.merge(compact(options))), "batchId")
+      submit_batch(urls, **options)["batchId"]
+    end
+
+    def submit_batch(urls, **options)
+      payload = post("/v1/web/batch", { urls: urls.to_a }.merge(compact(options)))
+      payload.merge("batchId" => job_id(payload, "batchId"))
     end
 
     def batch_status(id)

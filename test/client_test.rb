@@ -141,6 +141,13 @@ class ClientTest < Minitest::Test
     assert_equal 3, calls
   end
 
+  def test_submit_batch_says_which_urls_were_skipped
+    client = responding(201, { "batchId" => "b_1", "status" => "queued", "invalidUrls" => ["htps//a"] })
+    accepted = client.submit_batch(["https://a.example", "htps//a"])
+
+    assert_equal ["b_1", ["htps//a"]], accepted.values_at("batchId", "invalidUrls")
+  end
+
   def test_cancel_sends_delete_on_the_job_id
     client = responding(200, { "success" => true, "data" => { "status" => "cancelled" } })
     results = [client.cancel_crawl("c_1"), client.cancel_batch("b_1")]
