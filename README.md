@@ -239,6 +239,7 @@ hf = Hydrafetch::Client.new("hf_...",
 | `batch(urls, **options)` | job hash, polled to completion | 1 per page |
 | `start_crawl`, `start_batch` | job id `String` | 1 per page |
 | `crawl_status(id)`, `batch_status(id)` | job hash | free |
+| `cancel_crawl(id)`, `cancel_batch(id)` | job hash | free, pages not yet read are not charged |
 | `rate_result(rating, request_id:, url:, reasons:, note:)` | rating hash | free |
 
 Failed requests are not billed. Pricing does not vary with page difficulty, so there is no render, stealth or proxy option to set.

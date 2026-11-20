@@ -124,6 +124,14 @@ module Hydrafetch
       get("/v1/web/batch/#{escape(id)}")
     end
 
+    def cancel_crawl(id)
+      request(Net::HTTP::Delete, "/v1/web/crawl/#{escape(id)}")
+    end
+
+    def cancel_batch(id)
+      request(Net::HTTP::Delete, "/v1/web/batch/#{escape(id)}")
+    end
+
     def crawl(url, poll_interval: 2, job_timeout: 300, on_progress: nil, **options)
       id = start_crawl(url, **options)
       wait(poll_interval, job_timeout, on_progress) { crawl_status(id) }

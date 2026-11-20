@@ -141,6 +141,15 @@ class ClientTest < Minitest::Test
     assert_equal 3, calls
   end
 
+  def test_cancel_sends_delete_on_the_job_id
+    client = responding(200, { "success" => true, "data" => { "status" => "cancelled" } })
+    results = [client.cancel_crawl("c_1"), client.cancel_batch("b_1")]
+
+    assert_equal ["cancelled", "cancelled"], results.map { |r| r["status"] }
+    assert_equal [["DELETE", "/v1/web/crawl/c_1"], ["DELETE", "/v1/web/batch/b_1"]],
+                 @requests.map { |r| [r.method, r.path] }
+  end
+
   def test_batch_id_comes_from_the_top_level
     client = responding(201, { "batchId" => "b_1", "status" => "pending" })
     assert_equal "b_1", client.start_batch(["https://a.example"])
